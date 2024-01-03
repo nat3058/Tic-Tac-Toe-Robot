@@ -87,10 +87,12 @@ static void MX_TIM3_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 void TIM3_ISR() {
+	// timer used to play audio at the proper sampling freq
 	Audio_StateMachine(&hdac1);
 }
 
 void TIM17_ISR() {
+	// timer used to monitor/poll limit switches every 1ms
 	xMinus = HAL_GPIO_ReadPin(X_MINUS_Limit_Port, X_MINUS_Limit_Pin);
 	xPlus = HAL_GPIO_ReadPin(X_PLUS_Limit_Port, X_PLUS_Limit_Pin);
 	yMinus = HAL_GPIO_ReadPin(Y_MINUS_Limit_Port, Y_MINUS_Limit_Pin);
@@ -136,16 +138,16 @@ int main(void)
   MX_DAC1_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_8B_R, 0x0);
+  HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_8B_R, 0x0); // DAC for audio
   HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
-  HAL_TIM_Base_Start_IT(&htim3);
-  HAL_TIM_Base_Start_IT(&htim17);
+  HAL_TIM_Base_Start_IT(&htim3); // TIM3 needed to drive the DAC at our sampling freq of 44.1kHz
+  HAL_TIM_Base_Start_IT(&htim17); // poll limit swtiches
   LCD_Init();
   struct Plotter plotter = {
 		  0, 0, 0, 0,
 		  &htim2, &htim2,
 		  TIM_CHANNEL_4, TIM_CHANNEL_3
-  };
+  }; //TIM2 used for PWM
   Motor_Init(&plotter);
   /* USER CODE END 2 */
 
