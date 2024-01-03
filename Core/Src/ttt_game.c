@@ -39,16 +39,16 @@ void mainApp(struct Plotter* plotter, UART_HandleTypeDef* phuart){
         	Motor_DrawBoard(plotter);
             remaining_squares = 9;
             game_initialized = 1;
-            memset(square_taken, 0, sizeof(square_taken));
+            memset(square_taken, 0, sizeof(square_taken)); // set all squares to untaken
         }//end if
 
 		LCD_StartCountdown(8);
 		int prev_state[9];
 		memcpy(prev_state, square_taken, sizeof(square_taken));
-		while(!memcmp(prev_state, square_taken, sizeof(square_taken))) {
-			Pixy_UpdateBoard(phuart, square_taken);
+		while(!memcmp(prev_state, square_taken, sizeof(square_taken))) { // keep looping till human has made a move
+			Pixy_UpdateBoard(phuart, square_taken); 
 		}
-		current_audio_state = PLAYER_TURN;
+		current_audio_state = PLAYER_TURN; // audio state is now in END of Player turn
 
 		int idx = determine_square_idx(prev_state, square_taken);
 		if (idx == 9) {
@@ -58,11 +58,11 @@ void mainApp(struct Plotter* plotter, UART_HandleTypeDef* phuart){
 		//mark square as taken, decrement total squares
 		printf("Human takes square %d.\n",idx); // TODO: Remove After Debug
 		remaining_squares -= 1;
-		LCD_DrawO(idx);
+		LCD_DrawO(idx); // update the new status of the board on the LCD
 		print_board(square_taken);
         
         //check for win
-        int winner = check_for_win(square_taken);
+        int winner = check_for_win(square_taken); // winner = 1 if human won, winner = 2 if computer won
 
         //if player 1 didnt win, continue
         if (!winner && remaining_squares){
@@ -72,14 +72,15 @@ void mainApp(struct Plotter* plotter, UART_HandleTypeDef* phuart){
             int modified_board[9];
             memcpy(modified_board, square_taken, sizeof(square_taken));
             for (int i = 0; i < 9; ++i)
-            	modified_board[i] = square_taken[i] ? (square_taken[i] == 1 ? -1 : 1) : 0;
+            	modified_board[i] = square_taken[i] ? (square_taken[i] == 1 ? -1 : 1) : 0; // change the board implementation to make it compatible with the minimax algo (-1 is player and 1 is computer now)
 
+	    // vary the difficulty depending on configured difficulty settings	
             if (mode == 1)
             	idx = rand() % 10 < 8 ? easyAI(modified_board) : impossibleAI(modified_board);
             else
             	idx = rand() % 10 < 2 ? easyAI(modified_board) : impossibleAI(modified_board);
 
-            square_taken[idx] = 2;
+            square_taken[idx] = 2; // mark computer selected square as taken
             remaining_squares -= 1;
             Motor_Move_Square(plotter, idx);
             HAL_Delay(1000);
@@ -136,12 +137,13 @@ void mainApp(struct Plotter* plotter, UART_HandleTypeDef* phuart){
             	strcat(scores, "-");
             	itoa(draws, buf, 10);
             	strcat(scores, buf);
-            	LCD_Display_Text(scores, 0.6, 5000);
+            	LCD_Display_Text(scores, 0.6, 5000); //show the running scoreboard of games won,loss and tied
             } //end  if
         }//end  if
     }//end while
 }//end main
 
+// find index of the newly occupied square
 int determine_square_idx(int* prev_state, int* new_state){
 	for (int i = 0; i < 9; ++i) {
 		if (prev_state[i] != new_state[i])
@@ -230,15 +232,15 @@ int easyAI(int* square_taken) {
 		i = rand() % 9;
 	return i;
 }
-
+// for every possible move the computer can make, find the move that produces the worst board for the player
 int impossibleAI(int* square_taken) {
     int move = -1;
     int score = -2;
     int i;
     for(i = 0; i < 9; ++i) {
         if(square_taken[i] == 0) {
-        	square_taken[i] = 1;
-            int tempScore = -minimax(square_taken, -1);
+        	square_taken[i] = 1; // simulate computer takes this square
+            int tempScore = -minimax(square_taken, -1); // see if this creates a worse board for player
             square_taken[i] = 0;
             if(tempScore > score) {
                 score = tempScore;
@@ -269,6 +271,6 @@ int minimax(int square_taken[9], int player) {
             square_taken[i] = 0;//Reset board after try
         }
     }
-    if(move == -1) return 0;
+    if(move == -1) return 0; // return if all squares on board are full
     return score;
 }
